@@ -1,0 +1,72 @@
+{
+  "nav": {
+    "dashboard": "Painel",
+    "investors": "Investidores",
+    "vehicles": "Veículos",
+    "drivers": "Motoristas",
+    "events": "Eventos",
+    "revenues": "Receitas",
+    "expenses": "Despesas",
+    "reports": "Relatórios",
+    "logout": "Sair"
+  },
+  "dashboard": {
+    "title": "Painel da Frota",
+    "totalVehicles": "Total de Veículos",
+    "activeRentals": "Locações Ativas",
+    "inMaintenance": "Em Manutenção",
+    "monthlyRevenue": "Receita Mensal",
+    "monthlyExpenses": "Despesas Mensais",
+    "monthlyNetProfit": "Lucro Líquido Mensal",
+    "eventsThisMonth": "Eventos do Mês",
+    "eventsNextMonth": "Eventos Previstos (próx. mês)",
+    "performanceTable": "Desempenho da Frota",
+    "plate": "Placa",
+    "driver": "Motorista",
+    "revenueMonth": "Receita (mês)",
+    "expensesMonth": "Despesas (mês)",
+    "profit": "Lucro",
+    "occupancyRate": "Taxa de Ocupação",
+    "occupancyStatus": "Status"
+  },
+  "vehicle": {
+    "status": {
+      "available": "Disponível",
+      "rented": "Locado",
+      "maintenance": "Manutenção",
+      "sold": "Vendido"
+    },
+    "occupancy": {
+      "occupied": "Ocupado",
+      "maintenance": "Manutenção",
+      "idle": "Disponível"
+    }
+  },
+  "driver": {
+    "status": {
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "suspended": "Suspenso"
+    }
+  },
+  "common": {
+    "create": "Criar",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "search": "Buscar",
+    "loading": "Carregando...",
+    "noResults": "Nenhum resultado encontrado",
+    "actions": "Ações",
+    "confirmDelete": "Tem certeza que deseja excluir este registro?",
+    "exportPdf": "Exportar PDF",
+    "exportExcel": "Exportar Excel"
+  },
+  "auth": {
+    "email": "E-mail",
+    "password": "Senha",
+    "signIn": "Entrar",
+    "signInError": "E-mail ou senha inválidos"
+  }
+}

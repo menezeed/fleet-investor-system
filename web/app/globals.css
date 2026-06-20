@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 60 9% 98%;        /* #FAFAF9 warm off-white */
+  --foreground: 24 10% 10%;       /* #1C1917 near-black warm */
+  --card: 0 0% 100%;
+  --card-foreground: 24 10% 10%;
+  --primary: 152 64% 18%;         /* #0F5132 deep green - profit/finance */
+  --primary-foreground: 0 0% 100%;
+  --muted: 60 5% 94%;
+  --muted-foreground: 24 6% 40%;
+  --success: 152 55% 30%;
+  --success-foreground: 0 0% 100%;
+  --warning: 32 81% 38%;          /* #B45309 amber - maintenance/alerts */
+  --warning-foreground: 0 0% 100%;
+  --destructive: 0 65% 35%;       /* #991B1B */
+  --destructive-foreground: 0 0% 100%;
+  --border: 24 6% 88%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: 'tnum' 1, 'cv02' 1;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

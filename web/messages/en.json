@@ -1,0 +1,72 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "investors": "Investors",
+    "vehicles": "Vehicles",
+    "drivers": "Drivers",
+    "events": "Events",
+    "revenues": "Revenues",
+    "expenses": "Expenses",
+    "reports": "Reports",
+    "logout": "Log out"
+  },
+  "dashboard": {
+    "title": "Fleet Dashboard",
+    "totalVehicles": "Total Vehicles",
+    "activeRentals": "Active Rentals",
+    "inMaintenance": "In Maintenance",
+    "monthlyRevenue": "Monthly Revenue",
+    "monthlyExpenses": "Monthly Expenses",
+    "monthlyNetProfit": "Monthly Net Profit",
+    "eventsThisMonth": "Events This Month",
+    "eventsNextMonth": "Forecasted Events (next month)",
+    "performanceTable": "Fleet Performance",
+    "plate": "Plate",
+    "driver": "Driver",
+    "revenueMonth": "Revenue (month)",
+    "expensesMonth": "Expenses (month)",
+    "profit": "Profit",
+    "occupancyRate": "Occupancy Rate",
+    "occupancyStatus": "Status"
+  },
+  "vehicle": {
+    "status": {
+      "available": "Available",
+      "rented": "Rented",
+      "maintenance": "Maintenance",
+      "sold": "Sold"
+    },
+    "occupancy": {
+      "occupied": "Occupied",
+      "maintenance": "Maintenance",
+      "idle": "Available"
+    }
+  },
+  "driver": {
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "suspended": "Suspended"
+    }
+  },
+  "common": {
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "search": "Search",
+    "loading": "Loading...",
+    "noResults": "No results found",
+    "actions": "Actions",
+    "confirmDelete": "Are you sure you want to delete this record?",
+    "exportPdf": "Export PDF",
+    "exportExcel": "Export Excel"
+  },
+  "auth": {
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signInError": "Invalid email or password"
+  }
+}
