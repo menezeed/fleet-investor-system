@@ -15,6 +15,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { getDeployInfo } from '@/lib/utils/deploy-info';
 
 interface NavItem {
   href: string;
@@ -28,6 +29,7 @@ export function Sidebar({
   labels: Record<string, string>;
 }) {
   const pathname = usePathname();
+  const { shortSha, commitMessage } = getDeployInfo();
 
   const items: NavItem[] = [
     { href: '/', label: labels.dashboard, icon: LayoutDashboard },
@@ -48,7 +50,15 @@ export function Sidebar({
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-sm font-bold text-primary-foreground">
           F
         </div>
-        <span className="text-sm font-semibold tracking-tight">Fleet Investor</span>
+        <div className="flex flex-col leading-tight">
+          <span className="text-sm font-semibold tracking-tight">Fleet Investor</span>
+          <span
+            className="text-[10px] font-mono text-muted-foreground"
+            title={commitMessage ? `Última alteração: ${commitMessage}` : undefined}
+          >
+            v.{shortSha}
+          </span>
+        </div>
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 p-2">
         {items.map((item) => {

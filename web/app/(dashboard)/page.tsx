@@ -39,19 +39,16 @@ export default function DashboardPage() {
       setLoading(true);
       const investorParam = selectedInvestorId || null;
 
-      const [{ data: summaryData }, { data: performanceData }] = await Promise.all([
-        supabase
-          .rpc('fleet_dashboard_summary_for_investor', { p_investor_id: investorParam })
-          .single<FleetDashboardSummary>(),
-        supabase
-          .rpc('fleet_performance_table_for_investor', { p_investor_id: investorParam })
-          .returns<FleetPerformanceRow[]>(),
+      const [summaryResult, performanceResult] = await Promise.all([
+        supabase.rpc('fleet_dashboard_summary_for_investor', { p_investor_id: investorParam }),
+        supabase.rpc('fleet_performance_table_for_investor', { p_investor_id: investorParam }),
       ]);
 
-      setSummary(summaryData ?? null);
-      setPerformance(
-        (performanceData ?? []).slice().sort((a, b) => b.profit_month - a.profit_month)
-      );
+      const summaryData = (summaryResult.data?.[0] ?? null) as FleetDashboardSummary | null;
+      const performanceData = (performanceResult.data ?? []) as FleetPerformanceRow[];
+
+      setSummary(summaryData);
+      setPerformance(performanceData.slice().sort((a, b) => b.profit_month - a.profit_month));
       setLoading(false);
     }
 
