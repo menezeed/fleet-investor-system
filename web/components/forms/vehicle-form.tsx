@@ -11,6 +11,7 @@ import { vehicleSchema, type VehicleFormValues } from '@/lib/validations/vehicle
 import { FieldWrapper, Input, Select, Textarea } from '@/components/ui/form-fields';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { SafeNumberInput } from '@/components/ui/safe-number-input';
+import { DateInputBr } from '@/components/ui/date-input-br';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Vehicle } from '@/types/database';
@@ -24,6 +25,9 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
   const supabase = createClient();
   const tCommon = useTranslations('common');
   const [serverError, setServerError] = useState<string | null>(null);
+  // CR-003 Change 6 fix: passing vehicle?.status_id ensures the current
+  // status is included even if it was later deactivated, so the edit screen
+  // never falls back to a blank "Select" — it always shows the saved value.
   const { options: statusOptions } = useLookupOptions('lookup_vehicle_statuses', vehicle?.status_id);
 
   const {
@@ -40,12 +44,13 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
           brand: vehicle.brand,
           model: vehicle.model,
           model_year: vehicle.model_year,
+          model_year_alt: vehicle.model_year_alt ?? undefined,
           color: vehicle.color ?? '',
           renavam: vehicle.renavam ?? '',
           crv_number: vehicle.crv_number ?? '',
+          chassis_number: vehicle.chassis_number ?? '',
           acquisition_date: vehicle.acquisition_date,
-          acquisition_cost: vehicle.acquisition_cost,
-          acquisition_value: vehicle.acquisition_value ?? undefined,
+          acquisition_value: vehicle.acquisition_value,
           current_market_value: vehicle.current_market_value ?? undefined,
           acquisition_mileage: vehicle.acquisition_mileage ?? undefined,
           current_mileage: vehicle.current_mileage ?? undefined,
@@ -71,8 +76,9 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
       color: values.color || null,
       renavam: values.renavam || null,
       crv_number: values.crv_number || null,
+      chassis_number: values.chassis_number || null,
       notes: values.notes || null,
-      acquisition_value: values.acquisition_value ?? null,
+      model_year_alt: values.model_year_alt ?? null,
       current_market_value: values.current_market_value ?? null,
       acquisition_mileage: values.acquisition_mileage ?? null,
       current_mileage: values.current_mileage ?? null,
@@ -105,6 +111,7 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
             <FieldWrapper label="Modelo" error={errors.model?.message} required>
               <Input {...register('model')} placeholder="Onix" />
             </FieldWrapper>
+            {/* CR-003 Change 1: "Year" and "Model Year" shown side by side */}
             <FieldWrapper label="Ano" error={errors.model_year?.message} required>
               <Controller
                 name="model_year"
@@ -116,7 +123,23 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
                     onChange={field.onChange}
                     onBlur={field.onBlur}
                     allowDecimal={false}
-                    placeholder="2023"
+                    placeholder="2020"
+                  />
+                )}
+              />
+            </FieldWrapper>
+            <FieldWrapper label="Ano Modelo" error={errors.model_year_alt?.message}>
+              <Controller
+                name="model_year_alt"
+                control={control}
+                render={({ field }) => (
+                  <SafeNumberInput
+                    name={field.name}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    allowDecimal={false}
+                    placeholder="2021"
                   />
                 )}
               />
@@ -143,22 +166,31 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
             <FieldWrapper label="Nº CRV" error={errors.crv_number?.message}>
               <Input {...register('crv_number')} />
             </FieldWrapper>
+            {/* CR-003 Change 3 */}
+            <FieldWrapper label="Número do Chassi" error={errors.chassis_number?.message}>
+              <Input {...register('chassis_number')} />
+            </FieldWrapper>
+            {/* CR-003 Change 2: DD/MM/YYYY display */}
             <FieldWrapper label="Data de Aquisição" error={errors.acquisition_date?.message} required>
-              <Input type="date" {...register('acquisition_date')} />
+              <Controller
+                name="acquisition_date"
+                control={control}
+                render={({ field }) => (
+                  <DateInputBr
+                    name={field.name}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    max={new Date().toISOString().slice(0, 10)}
+                  />
+                )}
+              />
             </FieldWrapper>
           </div>
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-            <FieldWrapper label="Custo de Aquisição (R$)" error={errors.acquisition_cost?.message} required>
-              <Controller
-                name="acquisition_cost"
-                control={control}
-                render={({ field }) => (
-                  <CurrencyInput name={field.name} value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
-                )}
-              />
-            </FieldWrapper>
-            <FieldWrapper label="Valor de Aquisição (R$)" error={errors.acquisition_value?.message}>
+            {/* CR-003 Change 4: single consolidated "Acquisition Value" field */}
+            <FieldWrapper label="Valor de Aquisição (R$)" error={errors.acquisition_value?.message} required>
               <Controller
                 name="acquisition_value"
                 control={control}
@@ -176,6 +208,7 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
                 )}
               />
             </FieldWrapper>
+            {/* CR-003 Change 5: thousands separator on mileage fields */}
             <FieldWrapper label="KM na Aquisição" error={errors.acquisition_mileage?.message}>
               <Controller
                 name="acquisition_mileage"
@@ -187,6 +220,7 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
                     onChange={field.onChange}
                     onBlur={field.onBlur}
                     allowDecimal={false}
+                    thousandsSeparator
                   />
                 )}
               />
@@ -202,6 +236,7 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
                     onChange={field.onChange}
                     onBlur={field.onBlur}
                     allowDecimal={false}
+                    thousandsSeparator
                   />
                 )}
               />

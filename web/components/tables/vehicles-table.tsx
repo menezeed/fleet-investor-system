@@ -12,7 +12,7 @@ export interface VehicleRow {
   brand: string;
   model: string;
   model_year: number;
-  acquisition_cost: number;
+  acquisition_value: number;
   current_market_value: number | null;
   lookup_vehicle_statuses: { code: string; label: string } | null;
 }
@@ -26,9 +26,9 @@ export function VehiclesTable({ vehicles, emptyMessage }: { vehicles: VehicleRow
     { header: 'Marca/Modelo', accessor: (v) => `${v.brand} ${v.model}` },
     { header: 'Ano', accessor: (v) => v.model_year, align: 'center' },
     {
-      header: 'Custo Aquisição',
+      header: 'Valor de Aquisição',
       align: 'right',
-      accessor: (v) => formatCurrency(v.acquisition_cost, locale),
+      accessor: (v) => formatCurrency(v.acquisition_value, locale),
     },
     {
       header: 'Valor Atual',

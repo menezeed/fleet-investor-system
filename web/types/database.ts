@@ -53,12 +53,16 @@ export interface Vehicle {
   brand: string;
   model: string;
   model_year: number;
+  /** CR-003 Change 1: "Model Year" field, shown next to Year. */
+  model_year_alt: number | null;
   color: string | null;
   renavam: string | null;
   crv_number: string | null;
+  /** CR-003 Change 3 */
+  chassis_number: string | null;
   acquisition_date: string;
-  acquisition_cost: number;
-  acquisition_value: number | null;
+  /** CR-003 Change 4: consolidated single "Acquisition Value" field (was acquisition_cost). */
+  acquisition_value: number;
   current_market_value: number | null;
   acquisition_mileage: number | null;
   current_mileage: number | null;
@@ -131,6 +135,25 @@ export interface VehicleEvent {
   value: number | null;
   is_completed: boolean;
   completed_date: string | null;
+  /** CR-004/CR-005: optional link to an Event Catalog entry. */
+  catalog_item_id: string | null;
+  /** CR-004 Change 4: optional mileage reading at the time of the event. */
+  mileage: number | null;
+}
+
+// ---- Event Catalog (CR-005) ----
+// Repurposed lookup_expense_types table: Name (label) / Description / Frequency.
+
+export interface EventCatalogItem {
+  id: string;
+  code: string;
+  label: string;
+  description: string | null;
+  frequency: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
 // ---- View-backed read models ----
@@ -167,8 +190,7 @@ export interface VehicleFinancialSummary {
   model: string;
   status_code: VehicleStatusCode;
   status_label: string;
-  acquisition_cost: number;
-  acquisition_value: number | null;
+  acquisition_value: number;
   current_market_value: number | null;
   total_revenue: number;
   total_expenses: number;

@@ -13,7 +13,7 @@ export default async function VehiclesPage() {
   const { data: vehicles } = await supabase
     .from('vehicles')
     .select(
-      'id, plate_number, brand, model, model_year, acquisition_cost, current_market_value, lookup_vehicle_statuses(code, label)'
+      'id, plate_number, brand, model, model_year, acquisition_value, current_market_value, lookup_vehicle_statuses(code, label)'
     )
     .order('created_at', { ascending: false })
     .returns<VehicleRow[]>();

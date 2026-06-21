@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,8 +8,11 @@ import { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { vehicleEventSchema, type VehicleEventFormValues } from '@/lib/validations/financial';
+import { useLookupOptions } from '@/lib/lookups/use-lookup-options';
 import { FieldWrapper, Input, Select, Textarea } from '@/components/ui/form-fields';
 import { CurrencyInput } from '@/components/ui/currency-input';
+import { SafeNumberInput } from '@/components/ui/safe-number-input';
+import { DateInputBr } from '@/components/ui/date-input-br';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Vehicle, VehicleEvent } from '@/types/database';
@@ -19,38 +22,51 @@ interface VehicleEventFormProps {
   event?: VehicleEvent;
 }
 
+// CR-004 Change 4: Event Date, Event Type (catalog), Value (optional),
+// Mileage (optional).
 export function VehicleEventForm({ vehicles, event }: VehicleEventFormProps) {
   const router = useRouter();
   const supabase = createClient();
   const tCommon = useTranslations('common');
   const [serverError, setServerError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const { options: catalogOptions } = useLookupOptions('lookup_expense_types', event?.catalog_item_id);
 
   const {
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<VehicleEventFormValues>({
     resolver: zodResolver(vehicleEventSchema),
     defaultValues: event
       ? {
           vehicle_id: event.vehicle_id,
-          description: event.description,
+          catalog_item_id: event.catalog_item_id ?? undefined,
+          description: event.description ?? '',
           planned_date: event.planned_date ?? '',
           value: event.value ?? undefined,
+          mileage: event.mileage ?? undefined,
           is_completed: event.is_completed,
         }
-      : { is_completed: false },
+      : { is_completed: false, planned_date: new Date().toISOString().slice(0, 10) },
   });
+
+  useEffect(() => {
+    if (!event && catalogOptions.length > 0) {
+      setValue('catalog_item_id', catalogOptions[0].id);
+    }
+  }, [event, catalogOptions, setValue]);
 
   async function onSubmit(values: VehicleEventFormValues) {
     setServerError(null);
 
     const payload = {
       ...values,
-      planned_date: values.planned_date || null,
+      description: values.description || null,
       value: values.value ?? null,
+      mileage: values.mileage ?? null,
     };
 
     const { error } = event
@@ -97,10 +113,26 @@ export function VehicleEventForm({ vehicles, event }: VehicleEventFormProps) {
                 ))}
               </Select>
             </FieldWrapper>
-            <FieldWrapper label="Data Planejada" error={errors.planned_date?.message}>
-              <Input type="date" {...register('planned_date')} />
+            <FieldWrapper label="Tipo de Evento" error={errors.catalog_item_id?.message} required>
+              <Select {...register('catalog_item_id')}>
+                <option value="">Selecione...</option>
+                {catalogOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </Select>
             </FieldWrapper>
-            <FieldWrapper label="Valor Estimado (R$)" error={errors.value?.message}>
+            <FieldWrapper label="Data do Evento" error={errors.planned_date?.message} required>
+              <Controller
+                name="planned_date"
+                control={control}
+                render={({ field }) => (
+                  <DateInputBr name={field.name} value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
+                )}
+              />
+            </FieldWrapper>
+            <FieldWrapper label="Valor (R$)" error={errors.value?.message}>
               <Controller
                 name="value"
                 control={control}
@@ -109,20 +141,34 @@ export function VehicleEventForm({ vehicles, event }: VehicleEventFormProps) {
                 )}
               />
             </FieldWrapper>
+            <FieldWrapper label="Quilometragem" error={errors.mileage?.message}>
+              <Controller
+                name="mileage"
+                control={control}
+                render={({ field }) => (
+                  <SafeNumberInput
+                    name={field.name}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    allowDecimal={false}
+                    thousandsSeparator
+                  />
+                )}
+              />
+            </FieldWrapper>
           </div>
 
-          <FieldWrapper label="Descrição" error={errors.description?.message} required>
-            <Textarea {...register('description')} placeholder="Ex: Troca de óleo, revisão dos 20.000km..." />
+          <FieldWrapper label="Observações" error={errors.description?.message}>
+            <Textarea {...register('description')} placeholder="Detalhes adicionais (opcional)" />
           </FieldWrapper>
 
-          {event && (
-            <div className="flex items-center gap-2">
-              <input id="is_completed" type="checkbox" {...register('is_completed')} className="h-4 w-4" />
-              <label htmlFor="is_completed" className="text-sm">
-                Evento concluído
-              </label>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <input id="is_completed" type="checkbox" {...register('is_completed')} className="h-4 w-4" />
+            <label htmlFor="is_completed" className="text-sm">
+              Evento concluído
+            </label>
+          </div>
 
           {serverError && <p className="text-sm text-destructive">{serverError}</p>}
 

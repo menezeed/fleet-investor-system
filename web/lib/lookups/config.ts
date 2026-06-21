@@ -1,5 +1,7 @@
-// Central registry of the 5 editable lookup tables. Adding a new editable
-// combo in the future means adding one entry here plus a route folder.
+// Central registry of the 4 generic editable lookup tables (Name-only combos).
+// The 5th lookup, lookup_expense_types, was repurposed by CR-005 into the
+// "Event Catalog" (Name, Description, Frequency) and has its own dedicated
+// route/manager at /settings/event-catalog — see EventCatalogManager.
 
 export interface LookupConfig {
   /** Supabase table name */
@@ -18,12 +20,6 @@ export const LOOKUP_CONFIGS: LookupConfig[] = [
     slug: 'revenue-types',
     title: 'Tipos de Receita',
     description: 'Categorias usadas ao lançar uma receita (ex: Pagamento de Locação)',
-  },
-  {
-    table: 'lookup_expense_types',
-    slug: 'expense-types',
-    title: 'Tipos de Despesa',
-    description: 'Categorias usadas ao lançar uma despesa (ex: Combustível, Seguro)',
   },
   {
     table: 'lookup_driver_statuses',

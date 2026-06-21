@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, type ChangeEvent, type KeyboardEvent } from 'react';
+import { forwardRef, useState, useEffect, type ChangeEvent, type KeyboardEvent } from 'react';
 import { cn } from '@/lib/utils/cn';
 
 interface SafeNumberInputProps {
@@ -12,10 +12,17 @@ interface SafeNumberInputProps {
   className?: string;
   /** Allow decimal point. Default true. Set false for integer-only fields like mileage. */
   allowDecimal?: boolean;
+  /** CR-003 Change 5: display with thousands separators (e.g. "120.500"). Integer fields only. */
+  thousandsSeparator?: boolean;
   placeholder?: string;
 }
 
 const BLOCKED_KEYS = ['e', 'E', '+', '-'];
+
+function formatWithThousands(digits: string): string {
+  if (!digits) return '';
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
 
 /**
  * Plain numeric input (no currency formatting) that blocks letters,
@@ -24,7 +31,23 @@ const BLOCKED_KEYS = ['e', 'E', '+', '-'];
  * use CurrencyInput instead.
  */
 export const SafeNumberInput = forwardRef<HTMLInputElement, SafeNumberInputProps>(
-  ({ name, value, onChange, onBlur, disabled, className, allowDecimal = true, placeholder }, ref) => {
+  (
+    { name, value, onChange, onBlur, disabled, className, allowDecimal = true, thousandsSeparator = false, placeholder },
+    ref
+  ) => {
+    const [display, setDisplay] = useState(() =>
+      thousandsSeparator && value != null ? formatWithThousands(String(value)) : value != null ? String(value) : ''
+    );
+
+    useEffect(() => {
+      if (thousandsSeparator) {
+        setDisplay(value != null ? formatWithThousands(String(value)) : '');
+      } else {
+        setDisplay(value != null ? String(value) : '');
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value]);
+
     function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
       if (BLOCKED_KEYS.includes(e.key) || (!allowDecimal && e.key === '.')) {
         e.preventDefault();
@@ -39,7 +62,14 @@ export const SafeNumberInput = forwardRef<HTMLInputElement, SafeNumberInputProps
       if (firstDot !== -1) {
         raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, '');
       }
-      e.target.value = raw;
+
+      if (thousandsSeparator) {
+        // raw here is digits-only (allowDecimal is false for thousands-separated fields)
+        setDisplay(formatWithThousands(raw));
+      } else {
+        setDisplay(raw);
+      }
+
       onChange(raw === '' ? undefined : Number(raw));
     }
 
@@ -50,7 +80,7 @@ export const SafeNumberInput = forwardRef<HTMLInputElement, SafeNumberInputProps
         type="text"
         inputMode={allowDecimal ? 'decimal' : 'numeric'}
         autoComplete="off"
-        value={value ?? ''}
+        value={display}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onBlur={onBlur}

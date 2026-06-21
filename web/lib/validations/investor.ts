@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isValidCpf, isValidCnpj, isValidPhone, isValidCep, isPlausiblePix } from '@/lib/masks/br-format';
+import { isValidCpf, isValidCnpj, isValidPhoneIntl, isValidCep, isPlausiblePix } from '@/lib/masks/br-format';
 
 export const BRAZILIAN_STATES = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
@@ -25,7 +25,7 @@ export const investorSchema = z
       .string()
       .optional()
       .nullable()
-      .refine((v) => !v || isValidPhone(v), 'Telefone inválido — use (DD) 9XXXX-XXXX'),
+      .refine((v) => !v || isValidPhoneIntl(v), 'Telefone inválido — informe entre 7 e 15 dígitos, com código do país se aplicável'),
     document_type_id: z.string().uuid('Selecione um tipo de documento'),
     // Not persisted — set by the form alongside document_type_id so this
     // schema can apply CPF/CNPJ check-digit validation without needing a

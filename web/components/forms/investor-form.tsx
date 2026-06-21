@@ -8,9 +8,10 @@ import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { investorSchema, type InvestorFormValues, BRAZILIAN_STATES } from '@/lib/validations/investor';
 import { useLookupOptions } from '@/lib/lookups/use-lookup-options';
-import { maskCpf, maskCnpj, maskPhone, maskCep } from '@/lib/masks/br-format';
+import { maskCpf, maskCnpj, maskPhoneIntl, maskCep } from '@/lib/masks/br-format';
 import { FieldWrapper, Input, Select, Textarea } from '@/components/ui/form-fields';
 import { MaskedInput } from '@/components/ui/masked-input';
+import { DateInputBr } from '@/components/ui/date-input-br';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Investor } from '@/types/database';
@@ -122,7 +123,19 @@ export function InvestorForm({ investor }: InvestorFormProps) {
               <Input {...register('full_name')} placeholder="Nome e sobrenome" />
             </FieldWrapper>
             <FieldWrapper label="Data de Cadastro" error={errors.registration_date?.message} required>
-              <Input type="date" max={new Date().toISOString().slice(0, 10)} {...register('registration_date')} />
+              <Controller
+                name="registration_date"
+                control={control}
+                render={({ field }) => (
+                  <DateInputBr
+                    name={field.name}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    max={new Date().toISOString().slice(0, 10)}
+                  />
+                )}
+              />
             </FieldWrapper>
             <FieldWrapper label="E-mail" error={errors.email?.message}>
               <Input type="email" {...register('email')} placeholder="nome@dominio.com" />
@@ -137,8 +150,8 @@ export function InvestorForm({ investor }: InvestorFormProps) {
                     value={field.value}
                     onChange={field.onChange}
                     onBlur={field.onBlur}
-                    mask={maskPhone}
-                    placeholder="(11) 91234-5678"
+                    mask={maskPhoneIntl}
+                    placeholder="+55 11 91234 5678"
                   />
                 )}
               />

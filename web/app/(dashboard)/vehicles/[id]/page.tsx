@@ -83,7 +83,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           label="Valor de Mercado Atual"
           value={summary?.current_market_value ? formatCurrency(summary.current_market_value, locale) : '—'}
         />
-        <KpiCard label="Custo de Aquisição" value={formatCurrency(summary?.acquisition_cost ?? 0, locale)} />
+        <KpiCard label="Valor de Aquisição" value={formatCurrency(summary?.acquisition_value ?? 0, locale)} />
       </div>
 
       <div className="flex flex-col gap-3">

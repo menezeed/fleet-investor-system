@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ListChecks } from 'lucide-react';
+import { ListChecks, CalendarClock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { LOOKUP_CONFIGS } from '@/lib/lookups/config';
 
@@ -12,6 +12,20 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* CR-005 Change 1: "Expense Types" renamed to "Event Catalog" in the menu */}
+        <Link href="/settings/event-catalog">
+          <Card className="transition-colors hover:bg-muted/40">
+            <CardContent className="flex items-start gap-3 p-4">
+              <CalendarClock className="mt-0.5 h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-medium">Catálogo de Eventos</p>
+                <p className="text-xs text-muted-foreground">
+                  Tipos de evento e despesa (ex: Troca de óleo, Manutenção), com descrição e frequência
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
         {LOOKUP_CONFIGS.map((config) => (
           <Link key={config.slug} href={`/settings/lookups/${config.slug}`}>
             <Card className="transition-colors hover:bg-muted/40">

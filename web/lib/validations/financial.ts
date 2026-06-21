@@ -17,11 +17,18 @@ export const expenseSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
+// CR-004: Event registration form fields = Event Date, Event Type (catalog),
+// Value (optional), Mileage (optional). is_completed is derived: events with
+// a date in the future are "planned", past/today are "completed" — but the
+// user can also mark a past-dated event as still pending via the checkbox
+// on the edit screen (e.g. a planned event whose date has passed).
 export const vehicleEventSchema = z.object({
   vehicle_id: z.string().uuid('Selecione um veículo'),
-  description: z.string().min(1, 'Descrição é obrigatória'),
-  planned_date: z.string().optional().nullable(),
-  value: z.coerce.number().optional().nullable(),
+  catalog_item_id: z.string().uuid('Selecione um tipo de evento'),
+  description: z.string().optional().nullable(),
+  planned_date: z.string().min(1, 'Data do evento é obrigatória'),
+  value: z.coerce.number().min(0).optional().nullable(),
+  mileage: z.coerce.number().int().min(0).optional().nullable(),
   is_completed: z.boolean().default(false),
 });
 
