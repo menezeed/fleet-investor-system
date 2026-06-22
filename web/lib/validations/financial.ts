@@ -1,19 +1,18 @@
 import { z } from 'zod';
 
-export const revenueSchema = z.object({
+// CR-011: unified Cash Flow entry, replacing the separate Revenue and
+// Expense forms. category_id's valid options depend on transaction_type
+// (lookup_revenue_types vs lookup_expense_types) — the form swaps the
+// dropdown source when transaction_type changes; this schema only checks
+// that *some* category was chosen, since the DB trigger is the source of
+// truth for which lookup table is valid for a given type.
+export const cashFlowSchema = z.object({
   vehicle_id: z.string().uuid('Selecione um veículo'),
-  driver_id: z.string().uuid().optional().nullable(),
-  revenue_date: z.string().min(1, 'Data é obrigatória'),
-  revenue_type_id: z.string().uuid('Selecione um tipo de receita'),
+  transaction_date: z.string().min(1, 'Data é obrigatória'),
+  transaction_type: z.enum(['revenue', 'expense']),
+  category_id: z.string().uuid('Selecione uma categoria'),
   amount: z.coerce.number().positive('Valor deve ser maior que zero'),
-  notes: z.string().optional().nullable(),
-});
-
-export const expenseSchema = z.object({
-  vehicle_id: z.string().uuid('Selecione um veículo'),
-  expense_date: z.string().min(1, 'Data é obrigatória'),
-  expense_type_id: z.string().uuid('Selecione um tipo de despesa'),
-  amount: z.coerce.number().positive('Valor deve ser maior que zero'),
+  mileage: z.coerce.number().int().min(0).optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 
@@ -54,8 +53,7 @@ export const investorParticipationSchema = z.object({
   effective_date: z.string().min(1),
 });
 
-export type RevenueFormValues = z.infer<typeof revenueSchema>;
-export type ExpenseFormValues = z.infer<typeof expenseSchema>;
+export type CashFlowFormValues = z.infer<typeof cashFlowSchema>;
 export type VehicleEventFormValues = z.infer<typeof vehicleEventSchema>;
 export type VehicleAssignmentFormValues = z.infer<typeof vehicleAssignmentSchema>;
 export type InvestorParticipationFormValues = z.infer<typeof investorParticipationSchema>;

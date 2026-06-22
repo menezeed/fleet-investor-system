@@ -8,8 +8,7 @@ import {
   Car,
   UserCircle,
   CalendarClock,
-  TrendingUp,
-  TrendingDown,
+  Wallet,
   FileBarChart,
   Link2,
   Settings,
@@ -31,15 +30,16 @@ export function Sidebar({
   const pathname = usePathname();
   const { shortSha, commitMessage } = getDeployInfo();
 
+  // CR-011/012/013: Revenues and Expenses replaced by a single Cash Flow
+  // module. CR-010: Events moved directly below it (was below Drivers).
   const items: NavItem[] = [
     { href: '/', label: labels.dashboard, icon: LayoutDashboard },
     { href: '/investors', label: labels.investors, icon: Users },
     { href: '/vehicles', label: labels.vehicles, icon: Car },
     { href: '/assignments', label: 'Alocações', icon: Link2 },
     { href: '/drivers', label: labels.drivers, icon: UserCircle },
+    { href: '/cash-flow', label: 'Fluxo de Caixa', icon: Wallet },
     { href: '/events', label: labels.events, icon: CalendarClock },
-    { href: '/revenues', label: labels.revenues, icon: TrendingUp },
-    { href: '/expenses', label: labels.expenses, icon: TrendingDown },
     { href: '/reports', label: labels.reports, icon: FileBarChart },
     { href: '/settings', label: 'Configurações', icon: Settings },
   ];

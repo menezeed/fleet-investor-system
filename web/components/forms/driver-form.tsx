@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { driverSchema, type DriverFormValues } from '@/lib/validations/driver';
 import { useLookupOptions } from '@/lib/lookups/use-lookup-options';
 import { FieldWrapper, Input, Select, Textarea } from '@/components/ui/form-fields';
+import { DatePickerBr } from '@/components/ui/date-picker-br';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Driver } from '@/types/database';
@@ -22,33 +23,44 @@ export function DriverForm({ driver }: DriverFormProps) {
   const supabase = createClient();
   const tCommon = useTranslations('common');
   const [serverError, setServerError] = useState<string | null>(null);
-  const { options: statusOptions } = useLookupOptions('lookup_driver_statuses', driver?.status_id);
+  const { options: statusOptions, loading: statusLoading } = useLookupOptions(
+    'lookup_driver_statuses',
+    driver?.status_id
+  );
 
   const {
     register,
+    control,
     handleSubmit,
-    setValue,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<DriverFormValues>({
     resolver: zodResolver(driverSchema),
-    defaultValues: driver
-      ? {
-          full_name: driver.full_name,
-          phone: driver.phone ?? '',
-          email: driver.email ?? '',
-          tax_id: driver.tax_id ?? '',
-          start_date: driver.start_date,
-          status_id: driver.status_id,
-          notes: driver.notes ?? '',
-        }
-      : undefined,
   });
 
+  // CR-008 bug fix: populate the form via reset() only once the lookup
+  // options have actually loaded. Using defaultValues directly races against
+  // the async fetch — the <select> mounts with a value before its <option>s
+  // exist, so the browser can't select anything and it silently falls back
+  // to blank/"Select", even though the value was set correctly in the form
+  // state. reset() re-syncs the rendered <select> after options are present.
   useEffect(() => {
-    if (!driver && statusOptions.length > 0) {
-      setValue('status_id', statusOptions[0].id);
+    if (statusLoading) return;
+
+    if (driver) {
+      reset({
+        full_name: driver.full_name,
+        phone: driver.phone ?? '',
+        email: driver.email ?? '',
+        tax_id: driver.tax_id ?? '',
+        start_date: driver.start_date,
+        status_id: driver.status_id,
+        notes: driver.notes ?? '',
+      });
+    } else if (statusOptions.length > 0) {
+      reset({ status_id: statusOptions[0].id });
     }
-  }, [driver, statusOptions, setValue]);
+  }, [driver, statusLoading, statusOptions, reset]);
 
   async function onSubmit(values: DriverFormValues) {
     setServerError(null);
@@ -83,7 +95,7 @@ export function DriverForm({ driver }: DriverFormProps) {
               <Input {...register('full_name')} />
             </FieldWrapper>
             <FieldWrapper label="Status" error={errors.status_id?.message} required>
-              <Select {...register('status_id')}>
+              <Select {...register('status_id')} disabled={statusLoading}>
                 <option value="">Selecione...</option>
                 {statusOptions.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -101,8 +113,21 @@ export function DriverForm({ driver }: DriverFormProps) {
             <FieldWrapper label="CPF / Tax ID" error={errors.tax_id?.message}>
               <Input {...register('tax_id')} />
             </FieldWrapper>
+            {/* CR-008: calendar picker, DD/MM/AAAA */}
             <FieldWrapper label="Data de Início" error={errors.start_date?.message} required>
-              <Input type="date" {...register('start_date')} />
+              <Controller
+                name="start_date"
+                control={control}
+                render={({ field }) => (
+                  <DatePickerBr
+                    name={field.name}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    max={new Date().toISOString().slice(0, 10)}
+                  />
+                )}
+              />
             </FieldWrapper>
           </div>
 

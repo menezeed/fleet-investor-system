@@ -11,7 +11,7 @@ import { vehicleSchema, type VehicleFormValues } from '@/lib/validations/vehicle
 import { FieldWrapper, Input, Select, Textarea } from '@/components/ui/form-fields';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { SafeNumberInput } from '@/components/ui/safe-number-input';
-import { DateInputBr } from '@/components/ui/date-input-br';
+import { DatePickerBr } from '@/components/ui/date-picker-br';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Vehicle } from '@/types/database';
@@ -28,45 +28,52 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
   // CR-003 Change 6 fix: passing vehicle?.status_id ensures the current
   // status is included even if it was later deactivated, so the edit screen
   // never falls back to a blank "Select" — it always shows the saved value.
-  const { options: statusOptions } = useLookupOptions('lookup_vehicle_statuses', vehicle?.status_id);
+  const { options: statusOptions, loading: statusLoading } = useLookupOptions('lookup_vehicle_statuses', vehicle?.status_id);
 
   const {
     register,
     control,
     handleSubmit,
-    setValue,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleSchema),
-    defaultValues: vehicle
-      ? {
-          plate_number: vehicle.plate_number,
-          brand: vehicle.brand,
-          model: vehicle.model,
-          model_year: vehicle.model_year,
-          model_year_alt: vehicle.model_year_alt ?? undefined,
-          color: vehicle.color ?? '',
-          renavam: vehicle.renavam ?? '',
-          crv_number: vehicle.crv_number ?? '',
-          chassis_number: vehicle.chassis_number ?? '',
-          acquisition_date: vehicle.acquisition_date,
-          acquisition_value: vehicle.acquisition_value,
-          current_market_value: vehicle.current_market_value ?? undefined,
-          acquisition_mileage: vehicle.acquisition_mileage ?? undefined,
-          current_mileage: vehicle.current_mileage ?? undefined,
-          status_id: vehicle.status_id,
-          notes: vehicle.notes ?? '',
-        }
-      : undefined,
   });
 
-  // For new vehicles, default to the first available status once options load
-  // (mirrors the old hardcoded default of 'available').
+  // CR-003 Change 6 bug fix (recurring in UAT/CR-008 for drivers too):
+  // populate the form via reset() only once the lookup options have loaded.
+  // Setting defaultValues directly races against the async options fetch —
+  // the <select> mounts with a status_id value before its <option>s exist,
+  // so the browser silently shows blank/"Select" even though the underlying
+  // form state is correct. reset() re-syncs the rendered <select> once
+  // options are actually present.
   useEffect(() => {
-    if (!vehicle && statusOptions.length > 0) {
-      setValue('status_id', statusOptions[0].id);
+    if (statusLoading) return;
+
+    if (vehicle) {
+      reset({
+        plate_number: vehicle.plate_number,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        model_year: vehicle.model_year,
+        model_year_alt: vehicle.model_year_alt ?? undefined,
+        color: vehicle.color ?? '',
+        renavam: vehicle.renavam ?? '',
+        crv_number: vehicle.crv_number ?? '',
+        chassis_number: vehicle.chassis_number ?? '',
+        acquisition_date: vehicle.acquisition_date,
+        acquisition_value: vehicle.acquisition_value,
+        current_market_value: vehicle.current_market_value ?? undefined,
+        acquisition_mileage: vehicle.acquisition_mileage ?? undefined,
+        current_mileage: vehicle.current_mileage ?? undefined,
+        rental_value: vehicle.rental_value ?? undefined,
+        status_id: vehicle.status_id,
+        notes: vehicle.notes ?? '',
+      });
+    } else if (statusOptions.length > 0) {
+      reset({ status_id: statusOptions[0].id });
     }
-  }, [vehicle, statusOptions, setValue]);
+  }, [vehicle, statusLoading, statusOptions, reset]);
 
   async function onSubmit(values: VehicleFormValues) {
     setServerError(null);
@@ -82,6 +89,7 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
       current_market_value: values.current_market_value ?? null,
       acquisition_mileage: values.acquisition_mileage ?? null,
       current_mileage: values.current_mileage ?? null,
+      rental_value: values.rental_value ?? null,
     };
 
     const { error } = vehicle
@@ -148,7 +156,7 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
               <Input {...register('color')} placeholder="Branco" />
             </FieldWrapper>
             <FieldWrapper label="Status" error={errors.status_id?.message} required>
-              <Select {...register('status_id')}>
+              <Select {...register('status_id')} disabled={statusLoading}>
                 <option value="">Selecione...</option>
                 {statusOptions.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -176,7 +184,7 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
                 name="acquisition_date"
                 control={control}
                 render={({ field }) => (
-                  <DateInputBr
+                  <DatePickerBr
                     name={field.name}
                     value={field.value}
                     onChange={field.onChange}
@@ -238,6 +246,19 @@ export function VehicleForm({ vehicle }: VehicleFormProps) {
                     allowDecimal={false}
                     thousandsSeparator
                   />
+                )}
+              />
+            </FieldWrapper>
+          </div>
+
+          {/* CR-007: default rental amount, used to pre-fill Cash Flow revenue entries */}
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            <FieldWrapper label="Valor da Locação (R$)" error={errors.rental_value?.message}>
+              <Controller
+                name="rental_value"
+                control={control}
+                render={({ field }) => (
+                  <CurrencyInput name={field.name} value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
                 )}
               />
             </FieldWrapper>

@@ -11,6 +11,7 @@ export type DriverStatusCode = 'active' | 'inactive' | 'suspended' | string;
 export type RevenueTypeCode = 'rental_payment' | 'damage_reimbursement' | 'other' | string;
 export type ExpenseTypeCode = string;
 export type DocumentTypeCode = 'cpf' | 'cnpj' | 'passport' | 'other' | string;
+export type CashFlowTransactionType = 'revenue' | 'expense';
 
 // ---- Lookup (editable combo) tables ----
 
@@ -66,6 +67,8 @@ export interface Vehicle {
   current_market_value: number | null;
   acquisition_mileage: number | null;
   current_mileage: number | null;
+  /** CR-007: default rental amount, pre-filled when creating a Cash Flow revenue entry. */
+  rental_value: number | null;
   status_id: string;
   notes: string | null;
   created_at: string;
@@ -108,29 +111,25 @@ export interface InvestorParticipation {
   end_date: string | null;
 }
 
-export interface Revenue {
-  id: string;
-  vehicle_id: string;
-  driver_id: string | null;
-  revenue_date: string;
-  revenue_type_id: string;
-  amount: number;
-  notes: string | null;
-}
+// ---- Cash Flow (CR-011/012/013) ----
+// Replaces the old Revenue and Expense tables with a single unified table.
 
-export interface Expense {
+export interface CashFlow {
   id: string;
   vehicle_id: string;
-  expense_date: string;
-  expense_type_id: string;
+  transaction_date: string;
+  transaction_type: CashFlowTransactionType;
+  /** References lookup_revenue_types when revenue, lookup_expense_types when expense. */
+  category_id: string;
   amount: number;
+  mileage: number | null;
   notes: string | null;
 }
 
 export interface VehicleEvent {
   id: string;
   vehicle_id: string;
-  description: string;
+  description: string | null;
   planned_date: string | null;
   value: number | null;
   is_completed: boolean;
@@ -165,6 +164,10 @@ export interface FleetDashboardSummary {
   monthly_revenue: number;
   monthly_expenses: number;
   monthly_net_profit: number;
+  /** CR-006: lifetime totals for the selected scope (all time, not just this month). */
+  total_revenue: number;
+  total_expenses: number;
+  total_net_profit: number;
   events_this_month: number;
   events_next_month_forecast: number;
 }
@@ -190,11 +193,14 @@ export interface VehicleFinancialSummary {
   model: string;
   status_code: VehicleStatusCode;
   status_label: string;
+  acquisition_date: string;
   acquisition_value: number;
   current_market_value: number | null;
   total_revenue: number;
   total_expenses: number;
   accumulated_profit: number;
+  /** CR-014: current_market_value - acquisition_value. Can be negative or positive. */
+  depreciation: number;
   accumulated_depreciated_profit: number;
   roi_percentage: number | null;
   roi_depreciated_percentage: number | null;
@@ -205,6 +211,7 @@ export interface InvestorVehicleFinancials {
   vehicle_id: string;
   ownership_percentage: number;
   administration_fee_percentage: number;
+  effective_date: string;
   total_revenue: number;
   total_expenses: number;
   accumulated_profit: number;
@@ -213,4 +220,27 @@ export interface InvestorVehicleFinancials {
   investor_accumulated_depreciated_profit: number;
   investor_acquisition_cost_share: number;
   investor_portfolio_value_share: number;
+}
+
+/** CR-014: one row per investor, consolidated across all owned vehicles. */
+export interface InvestorReportSummary {
+  investor_id: string;
+  investor_name: string;
+  first_investment_date: string;
+  total_revenue: number;
+  total_expenses: number;
+  net_profit: number;
+  portfolio_market_value: number;
+}
+
+/** CR-014: full transaction history per vehicle, for the Vehicle Detail screen. */
+export interface VehicleCashFlowDetail {
+  id: string;
+  vehicle_id: string;
+  transaction_date: string;
+  transaction_type: CashFlowTransactionType;
+  category_label: string;
+  amount: number;
+  mileage: number | null;
+  notes: string | null;
 }

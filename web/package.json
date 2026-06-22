@@ -25,6 +25,7 @@
     "tailwind-merge": "^2.5.2",
     "class-variance-authority": "^0.7.0",
     "date-fns": "^3.6.0",
+    "react-day-picker": "^8.10.1",
     "xlsx": "^0.18.5",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.3"

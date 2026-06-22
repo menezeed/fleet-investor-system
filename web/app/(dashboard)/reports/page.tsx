@@ -1,12 +1,11 @@
 import Link from 'next/link';
-import { Car, Users, UserCircle, CalendarClock } from 'lucide-react';
+import { Car, Users, CalendarClock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const reports = [
-  { href: '/reports/vehicles', label: 'Relatório de Veículos', desc: 'ROI, lucro e depreciação por veículo', icon: Car },
-  { href: '/reports/investors', label: 'Relatório de Investidores', desc: 'Participação, lucro e portfólio por investidor', icon: Users },
-  { href: '/reports/fleet', label: 'Relatório de Frota', desc: 'Visão consolidada de receitas, despesas e ocupação', icon: CalendarClock },
-  { href: '/reports/events', label: 'Relatório de Eventos', desc: 'Eventos passados ou futuros por período', icon: UserCircle },
+  { href: '/reports/vehicles', label: 'Relatório de Veículos', desc: 'ROI, lucro, depreciação e ocupação por veículo', icon: Car },
+  { href: '/reports/investors', label: 'Relatório de Investidores', desc: 'Resumo consolidado de receita, lucro e portfólio por investidor', icon: Users },
+  { href: '/reports/events', label: 'Relatório de Eventos', desc: 'Eventos passados ou futuros por período, investidor e veículo', icon: CalendarClock },
 ];
 
 export default function ReportsIndexPage() {

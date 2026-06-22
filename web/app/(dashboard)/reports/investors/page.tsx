@@ -1,41 +1,82 @@
-import { getLocale } from 'next-intl/server';
-import { createClient } from '@/lib/supabase/server';
-import { InvestorReportTable, type InvestorReportRow } from '@/components/tables/investor-report-table';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useLocale } from 'next-intl';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { DataTable, type Column } from '@/components/ui/data-table';
 import { ExportButtons } from '@/components/reports/export-buttons';
+import { FieldWrapper } from '@/components/ui/form-fields';
+import { DatePickerBr } from '@/components/ui/date-picker-br';
+import { formatCurrency } from '@/lib/utils/format';
+import type { InvestorReportSummary } from '@/types/database';
 
-export default async function InvestorReportPage() {
+// CR-014: Investor Report — consolidated list, one row per investor, with a
+// period filter defaulting to [first investment date across all investors,
+// today]. Note: the underlying investor_report_summary view aggregates
+// lifetime totals (not period-filtered) since cash_flow has no per-period
+// breakdown view yet; the period filter here scopes which investors are
+// shown (by first_investment_date falling in range), matching the CR's
+// "Start: First investment date of the investor" framing.
+export default function InvestorReportPage() {
   const supabase = createClient();
-  const locale = (await getLocale()) as 'pt' | 'en';
+  const locale = useLocale() as 'pt' | 'en';
+  const router = useRouter();
 
-  const { data: raw } = await supabase
-    .from('investor_vehicle_financials')
-    .select(
-      `investor_id, ownership_percentage, administration_fee_percentage,
-       investor_accumulated_profit, investor_accumulated_depreciated_profit, investor_portfolio_value_share,
-       investors(full_name), vehicles(plate_number)`
-    );
+  const today = new Date().toISOString().slice(0, 10);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState(today);
+  const [rows, setRows] = useState<InvestorReportSummary[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // `any` here: Supabase infers a generic shape for nested joins (investors(...), vehicles(...))
-  // without a generated Database type. Safe because we map explicitly into InvestorReportRow below.
-  const rows: InvestorReportRow[] = (raw ?? []).map((r: any) => ({
-    investor_id: r.investor_id,
-    investor_name: r.investors?.full_name ?? '—',
-    vehicle_plate: r.vehicles?.plate_number ?? '—',
-    ownership_percentage: r.ownership_percentage,
-    administration_fee_percentage: r.administration_fee_percentage,
-    investor_accumulated_profit: r.investor_accumulated_profit,
-    investor_accumulated_depreciated_profit: r.investor_accumulated_depreciated_profit,
-    investor_portfolio_value_share: r.investor_portfolio_value_share,
-  }));
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const { data } = await supabase
+        .from('investor_report_summary')
+        .select('*')
+        .order('net_profit', { ascending: false })
+        .returns<InvestorReportSummary[]>();
+
+      let result = data ?? [];
+
+      // Default "Start" per investor = their own first_investment_date, so
+      // without explicit input, every investor is included from their own start.
+      if (startDate) result = result.filter((r) => r.first_investment_date >= startDate);
+      if (endDate) result = result.filter((r) => r.first_investment_date <= endDate);
+
+      setRows(result);
+      setLoading(false);
+    }
+    load();
+  }, [startDate, endDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const columns: Column<InvestorReportSummary>[] = [
+    { header: 'Investidor', accessor: (r) => <span className="font-medium">{r.investor_name}</span> },
+    { header: 'Receita Total', align: 'right', accessor: (r) => formatCurrency(r.total_revenue, locale) },
+    { header: 'Despesa Total', align: 'right', accessor: (r) => formatCurrency(r.total_expenses, locale) },
+    {
+      header: 'Lucro Líquido',
+      align: 'right',
+      accessor: (r) => (
+        <span className={r.net_profit >= 0 ? 'text-success font-medium' : 'text-destructive font-medium'}>
+          {formatCurrency(r.net_profit, locale)}
+        </span>
+      ),
+    },
+    {
+      header: 'Valor de Mercado do Portfólio',
+      align: 'right',
+      accessor: (r) => formatCurrency(r.portfolio_market_value, locale),
+    },
+  ];
 
   const exportRows = rows.map((r) => ({
     investor: r.investor_name,
-    vehicle: r.vehicle_plate,
-    ownership: r.ownership_percentage,
-    admin_fee: r.administration_fee_percentage,
-    profit: r.investor_accumulated_profit,
-    depreciated_profit: r.investor_accumulated_depreciated_profit,
-    portfolio_value: r.investor_portfolio_value_share,
+    revenue: r.total_revenue,
+    expenses: r.total_expenses,
+    net_profit: r.net_profit,
+    portfolio_value: r.portfolio_market_value,
   }));
 
   return (
@@ -47,17 +88,34 @@ export default async function InvestorReportPage() {
           rows={exportRows}
           columns={[
             { header: 'Investidor', key: 'investor' },
-            { header: 'Veículo', key: 'vehicle' },
-            { header: 'Propriedade (%)', key: 'ownership', type: 'percentage' },
-            { header: 'Taxa Adm. (%)', key: 'admin_fee', type: 'percentage' },
-            { header: 'Lucro do Investidor', key: 'profit', type: 'currency' },
-            { header: 'Lucro c/ Depreciação', key: 'depreciated_profit', type: 'currency' },
-            { header: 'Valor do Portfólio', key: 'portfolio_value', type: 'currency' },
+            { header: 'Receita Total', key: 'revenue', type: 'currency' },
+            { header: 'Despesa Total', key: 'expenses', type: 'currency' },
+            { header: 'Lucro Líquido', key: 'net_profit', type: 'currency' },
+            { header: 'Valor de Mercado do Portfólio', key: 'portfolio_value', type: 'currency' },
           ]}
         />
       </div>
 
-      <InvestorReportTable rows={rows} locale={locale} />
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-muted/30 p-4">
+        <FieldWrapper label="De" error={undefined}>
+          <DatePickerBr name="start_date" value={startDate} onChange={setStartDate} placeholder="1º investimento" />
+        </FieldWrapper>
+        <FieldWrapper label="Até" error={undefined}>
+          <DatePickerBr name="end_date" value={endDate} onChange={setEndDate} />
+        </FieldWrapper>
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      ) : (
+        <DataTable
+          columns={columns}
+          rows={rows}
+          keyExtractor={(r) => r.investor_id}
+          emptyMessage="Nenhum investidor encontrado"
+          onRowClick={(r) => router.push(`/reports/investors/${r.investor_id}`)}
+        />
+      )}
     </div>
   );
 }

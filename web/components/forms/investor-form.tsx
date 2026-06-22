@@ -11,7 +11,7 @@ import { useLookupOptions } from '@/lib/lookups/use-lookup-options';
 import { maskCpf, maskCnpj, maskPhoneIntl, maskCep } from '@/lib/masks/br-format';
 import { FieldWrapper, Input, Select, Textarea } from '@/components/ui/form-fields';
 import { MaskedInput } from '@/components/ui/masked-input';
-import { DateInputBr } from '@/components/ui/date-input-br';
+import { DatePickerBr } from '@/components/ui/date-picker-br';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Investor } from '@/types/database';
@@ -25,42 +25,56 @@ export function InvestorForm({ investor }: InvestorFormProps) {
   const supabase = createClient();
   const tCommon = useTranslations('common');
   const [serverError, setServerError] = useState<string | null>(null);
-  const { options: documentTypeOptions } = useLookupOptions('lookup_document_types', investor?.document_type_id);
+  const { options: documentTypeOptions, loading: documentTypeLoading } = useLookupOptions(
+    'lookup_document_types',
+    investor?.document_type_id
+  );
 
   const {
     register,
     control,
     handleSubmit,
+    reset,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<InvestorFormValues>({
     resolver: zodResolver(investorSchema),
-    defaultValues: investor
-      ? {
-          full_name: investor.full_name,
-          email: investor.email ?? '',
-          phone: investor.phone ?? '',
-          document_type_id: investor.document_type_id,
-          document_number: investor.document_number,
-          pix_number: investor.pix_number ?? '',
-          address_street: investor.address_street ?? '',
-          address_number: investor.address_number ?? '',
-          address_complement: investor.address_complement ?? '',
-          address_neighborhood: investor.address_neighborhood ?? '',
-          address_city: investor.address_city ?? '',
-          address_state: (investor.address_state as InvestorFormValues['address_state']) ?? '',
-          address_zip_code: investor.address_zip_code ?? '',
-          address_country: investor.address_country ?? 'BR',
-          registration_date: investor.registration_date,
-          notes: investor.notes ?? '',
-          is_active: investor.is_active,
-        }
-      : {
-          is_active: true,
-          address_country: 'BR',
-          registration_date: new Date().toISOString().slice(0, 10),
-        },
   });
+
+  // Same race-condition fix as VehicleForm/DriverForm: populate via reset()
+  // only once the document type options have actually loaded.
+  useEffect(() => {
+    if (documentTypeLoading) return;
+
+    if (investor) {
+      reset({
+        full_name: investor.full_name,
+        email: investor.email ?? '',
+        phone: investor.phone ?? '',
+        document_type_id: investor.document_type_id,
+        document_number: investor.document_number,
+        pix_number: investor.pix_number ?? '',
+        address_street: investor.address_street ?? '',
+        address_number: investor.address_number ?? '',
+        address_complement: investor.address_complement ?? '',
+        address_neighborhood: investor.address_neighborhood ?? '',
+        address_city: investor.address_city ?? '',
+        address_state: (investor.address_state as InvestorFormValues['address_state']) ?? '',
+        address_zip_code: investor.address_zip_code ?? '',
+        address_country: investor.address_country ?? 'BR',
+        registration_date: investor.registration_date,
+        notes: investor.notes ?? '',
+        is_active: investor.is_active,
+      });
+    } else if (documentTypeOptions.length > 0) {
+      reset({
+        is_active: true,
+        address_country: 'BR',
+        registration_date: new Date().toISOString().slice(0, 10),
+        document_type_id: documentTypeOptions[0].id,
+      });
+    }
+  }, [investor, documentTypeLoading, documentTypeOptions, reset]);
 
   const documentTypeId = useWatch({ control, name: 'document_type_id' });
   const documentTypeCode = documentTypeOptions.find((o) => o.id === documentTypeId)?.code;
@@ -70,13 +84,6 @@ export function InvestorForm({ investor }: InvestorFormProps) {
   useEffect(() => {
     setValue('document_type_code', documentTypeCode);
   }, [documentTypeCode, setValue]);
-
-  // Default to the first document type (CPF, by seed order) for new investors.
-  useEffect(() => {
-    if (!investor && documentTypeOptions.length > 0 && !documentTypeId) {
-      setValue('document_type_id', documentTypeOptions[0].id);
-    }
-  }, [investor, documentTypeOptions, documentTypeId, setValue]);
 
   async function onSubmit(values: InvestorFormValues) {
     setServerError(null);
@@ -127,7 +134,7 @@ export function InvestorForm({ investor }: InvestorFormProps) {
                 name="registration_date"
                 control={control}
                 render={({ field }) => (
-                  <DateInputBr
+                  <DatePickerBr
                     name={field.name}
                     value={field.value}
                     onChange={field.onChange}
@@ -157,7 +164,7 @@ export function InvestorForm({ investor }: InvestorFormProps) {
               />
             </FieldWrapper>
             <FieldWrapper label="Tipo de Documento" error={errors.document_type_id?.message} required>
-              <Select {...register('document_type_id')}>
+              <Select {...register('document_type_id')} disabled={documentTypeLoading}>
                 <option value="">Selecione...</option>
                 {documentTypeOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>

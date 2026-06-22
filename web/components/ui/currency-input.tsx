@@ -10,6 +10,8 @@ interface CurrencyInputProps {
   onBlur?: () => void;
   disabled?: boolean;
   className?: string;
+  /** Applied to the <input> itself (e.g. text color), as opposed to className which wraps the container. */
+  inputClassName?: string;
 }
 
 /**
@@ -19,7 +21,7 @@ interface CurrencyInputProps {
  * "-" and extra separators at the keystroke level — not just on blur.
  */
 export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
-  ({ name, value, onChange, onBlur, disabled, className }, ref) => {
+  ({ name, value, onChange, onBlur, disabled, className, inputClassName }, ref) => {
     const [display, setDisplay] = useState('');
 
     // Keep the displayed text in sync when the form resets/loads external values
@@ -72,7 +74,10 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
           onBlur={onBlur}
           disabled={disabled}
           placeholder="0,00"
-          className="h-9 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+          className={cn(
+            'h-9 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50',
+            inputClassName
+          )}
         />
       </div>
     );

@@ -1,79 +1,101 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { ExportButtons } from '@/components/reports/export-buttons';
-import { FieldWrapper, Input, Select } from '@/components/ui/form-fields';
+import { FieldWrapper, Select } from '@/components/ui/form-fields';
+import { DatePickerBr } from '@/components/ui/date-picker-br';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
+import type { Vehicle, Investor } from '@/types/database';
 
 interface EventReportRow {
   id: string;
-  description: string;
+  description: string | null;
   planned_date: string | null;
   value: number | null;
   plate_number: string;
+  vehicle_name: string;
 }
 
+// CR-014: Events Report — adds Investor and Vehicle filters; columns in
+// order Date, Vehicle Name / License Plate, Event Description, Amount;
+// sorted by date.
 export default function EventsReportPage() {
   const supabase = createClient();
   const locale = 'pt' as const;
 
-  const today = new Date().toISOString().slice(0, 10);
-  const [timeframe, setTimeframe] = useState<'past' | 'future'>('future');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [investorFilter, setInvestorFilter] = useState('');
+  const [vehicleFilter, setVehicleFilter] = useState('');
+  const [investors, setInvestors] = useState<Investor[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [rows, setRows] = useState<EventReportRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.from('investors').select('*').eq('is_active', true).order('full_name').returns<Investor[]>().then(({ data }) => setInvestors(data ?? []));
+    supabase.from('vehicles').select('*').order('plate_number').returns<Vehicle[]>().then(({ data }) => setVehicles(data ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
 
-      let query = supabase
-        .from('vehicle_events')
-        .select('id, description, planned_date, value, vehicles(plate_number)')
-        .not('planned_date', 'is', null);
-
-      if (timeframe === 'future') {
-        query = query.gte('planned_date', startDate || today);
-      } else {
-        query = query.lte('planned_date', endDate || today);
+      // CR-014: Investor filter scopes to vehicles owned by that investor.
+      let vehicleIdsForInvestor: string[] | null = null;
+      if (investorFilter) {
+        const { data: participations } = await supabase
+          .from('investor_participations')
+          .select('vehicle_id')
+          .eq('investor_id', investorFilter)
+          .is('end_date', null);
+        vehicleIdsForInvestor = (participations ?? []).map((p) => p.vehicle_id);
       }
 
-      if (startDate && timeframe === 'past') query = query.gte('planned_date', startDate);
-      if (endDate && timeframe === 'future') query = query.lte('planned_date', endDate);
+      let query = supabase
+        .from('vehicle_events')
+        .select('id, description, planned_date, value, vehicles(plate_number, brand, model)');
 
-      const { data } = await query.order('planned_date', { ascending: timeframe === 'future' });
+      if (startDate) query = query.gte('planned_date', startDate);
+      if (endDate) query = query.lte('planned_date', endDate);
+      if (vehicleFilter) query = query.eq('vehicle_id', vehicleFilter);
+      if (vehicleIdsForInvestor) query = query.in('vehicle_id', vehicleIdsForInvestor.length > 0 ? vehicleIdsForInvestor : ['00000000-0000-0000-0000-000000000000']);
 
+      // CR-014: sorted by date
+      const { data } = await query.order('planned_date', { ascending: true, nullsFirst: false });
+
+      // `any` here: nested join shape without a generated Supabase type.
       setRows(
-        // `any` here: same nested-join inference note as in reports/investors/page.tsx
         (data ?? []).map((r: any) => ({
           id: r.id,
           description: r.description,
           planned_date: r.planned_date,
           value: r.value,
           plate_number: r.vehicles?.plate_number ?? '—',
+          vehicle_name: r.vehicles ? `${r.vehicles.brand} ${r.vehicles.model}` : '—',
         }))
       );
       setLoading(false);
     }
 
     load();
-  }, [timeframe, startDate, endDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [startDate, endDate, investorFilter, vehicleFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // CR-014: column order = Date, Vehicle Name / License Plate, Event Description, Amount
   const columns: Column<EventReportRow>[] = [
-    { header: 'Veículo', accessor: (e) => e.plate_number },
-    { header: 'Descrição', accessor: (e) => e.description },
     { header: 'Data', accessor: (e) => (e.planned_date ? formatDate(e.planned_date, locale) : '—') },
+    { header: 'Veículo / Placa', accessor: (e) => `${e.vehicle_name} — ${e.plate_number}` },
+    { header: 'Descrição do Evento', accessor: (e) => e.description ?? '—' },
     { header: 'Valor', align: 'right', accessor: (e) => (e.value ? formatCurrency(e.value, locale) : '—') },
   ];
 
   const exportRows = rows.map((e) => ({
-    vehicle: e.plate_number,
-    description: e.description,
     date: e.planned_date,
+    vehicle: `${e.vehicle_name} — ${e.plate_number}`,
+    description: e.description ?? '',
     value: e.value,
   }));
 
@@ -85,26 +107,42 @@ export default function EventsReportPage() {
           title="Relatorio de Eventos"
           rows={exportRows}
           columns={[
-            { header: 'Veículo', key: 'vehicle' },
-            { header: 'Descrição', key: 'description' },
             { header: 'Data', key: 'date', type: 'date' },
+            { header: 'Veículo / Placa', key: 'vehicle' },
+            { header: 'Descrição do Evento', key: 'description' },
             { header: 'Valor', key: 'value', type: 'currency' },
           ]}
         />
       </div>
 
       <div className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-muted/30 p-4">
-        <FieldWrapper label="Período" error={undefined} className="w-40">
-          <Select value={timeframe} onChange={(e) => setTimeframe(e.target.value as 'past' | 'future')}>
-            <option value="future">Eventos Futuros</option>
-            <option value="past">Eventos Passados</option>
-          </Select>
-        </FieldWrapper>
         <FieldWrapper label="De" error={undefined}>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <DatePickerBr name="start_date" value={startDate} onChange={setStartDate} />
         </FieldWrapper>
         <FieldWrapper label="Até" error={undefined}>
-          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <DatePickerBr name="end_date" value={endDate} onChange={setEndDate} />
+        </FieldWrapper>
+        {/* CR-014: Investor filter */}
+        <FieldWrapper label="Investidor" error={undefined} className="w-56">
+          <Select value={investorFilter} onChange={(e) => setInvestorFilter(e.target.value)}>
+            <option value="">Todos os Investidores</option>
+            {investors.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.full_name}
+              </option>
+            ))}
+          </Select>
+        </FieldWrapper>
+        {/* CR-014: Vehicle filter */}
+        <FieldWrapper label="Veículo" error={undefined} className="w-56">
+          <Select value={vehicleFilter} onChange={(e) => setVehicleFilter(e.target.value)}>
+            <option value="">Todos os Veículos</option>
+            {vehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.plate_number} — {v.brand} {v.model}
+              </option>
+            ))}
+          </Select>
         </FieldWrapper>
       </div>
 

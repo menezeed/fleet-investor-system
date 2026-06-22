@@ -30,8 +30,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
           vehicles: t('vehicles'),
           drivers: t('drivers'),
           events: t('events'),
-          revenues: t('revenues'),
-          expenses: t('expenses'),
           reports: t('reports'),
         }}
       />

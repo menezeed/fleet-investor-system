@@ -12,7 +12,7 @@ import { useLookupOptions } from '@/lib/lookups/use-lookup-options';
 import { FieldWrapper, Input, Select, Textarea } from '@/components/ui/form-fields';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { SafeNumberInput } from '@/components/ui/safe-number-input';
-import { DateInputBr } from '@/components/ui/date-input-br';
+import { DatePickerBr } from '@/components/ui/date-picker-br';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Vehicle, VehicleEvent } from '@/types/database';
@@ -30,34 +30,43 @@ export function VehicleEventForm({ vehicles, event }: VehicleEventFormProps) {
   const tCommon = useTranslations('common');
   const [serverError, setServerError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const { options: catalogOptions } = useLookupOptions('lookup_expense_types', event?.catalog_item_id);
+  const { options: catalogOptions, loading: catalogLoading } = useLookupOptions(
+    'lookup_expense_types',
+    event?.catalog_item_id
+  );
 
   const {
     register,
     control,
     handleSubmit,
-    setValue,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<VehicleEventFormValues>({
     resolver: zodResolver(vehicleEventSchema),
-    defaultValues: event
-      ? {
-          vehicle_id: event.vehicle_id,
-          catalog_item_id: event.catalog_item_id ?? undefined,
-          description: event.description ?? '',
-          planned_date: event.planned_date ?? '',
-          value: event.value ?? undefined,
-          mileage: event.mileage ?? undefined,
-          is_completed: event.is_completed,
-        }
-      : { is_completed: false, planned_date: new Date().toISOString().slice(0, 10) },
   });
 
+  // Same race-condition fix as VehicleForm/DriverForm/InvestorForm.
   useEffect(() => {
-    if (!event && catalogOptions.length > 0) {
-      setValue('catalog_item_id', catalogOptions[0].id);
+    if (catalogLoading) return;
+
+    if (event) {
+      reset({
+        vehicle_id: event.vehicle_id,
+        catalog_item_id: event.catalog_item_id ?? undefined,
+        description: event.description ?? '',
+        planned_date: event.planned_date ?? '',
+        value: event.value ?? undefined,
+        mileage: event.mileage ?? undefined,
+        is_completed: event.is_completed,
+      });
+    } else if (catalogOptions.length > 0) {
+      reset({
+        is_completed: false,
+        planned_date: new Date().toISOString().slice(0, 10),
+        catalog_item_id: catalogOptions[0].id,
+      });
     }
-  }, [event, catalogOptions, setValue]);
+  }, [event, catalogLoading, catalogOptions, reset]);
 
   async function onSubmit(values: VehicleEventFormValues) {
     setServerError(null);
@@ -114,7 +123,7 @@ export function VehicleEventForm({ vehicles, event }: VehicleEventFormProps) {
               </Select>
             </FieldWrapper>
             <FieldWrapper label="Tipo de Evento" error={errors.catalog_item_id?.message} required>
-              <Select {...register('catalog_item_id')}>
+              <Select {...register('catalog_item_id')} disabled={catalogLoading}>
                 <option value="">Selecione...</option>
                 {catalogOptions.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -128,7 +137,7 @@ export function VehicleEventForm({ vehicles, event }: VehicleEventFormProps) {
                 name="planned_date"
                 control={control}
                 render={({ field }) => (
-                  <DateInputBr name={field.name} value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
+                  <DatePickerBr name={field.name} value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
                 )}
               />
             </FieldWrapper>

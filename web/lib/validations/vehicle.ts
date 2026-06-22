@@ -30,6 +30,8 @@ export const vehicleSchema = z.object({
   current_market_value: z.coerce.number().min(0).optional().nullable(),
   acquisition_mileage: z.coerce.number().int().min(0).optional().nullable(),
   current_mileage: z.coerce.number().int().min(0).optional().nullable(),
+  // CR-007: default rental amount
+  rental_value: z.coerce.number().min(0).optional().nullable(),
   status_id: z.string().uuid('Selecione um status'),
   notes: z.string().optional().nullable(),
 });

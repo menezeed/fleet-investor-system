@@ -71,6 +71,19 @@ export default function DashboardPage() {
         </FieldWrapper>
       </div>
 
+      {/* CR-006: lifetime financial totals, shown above the existing monthly indicators */}
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <KpiCard label="Receita Total" value={formatCurrency(summary?.total_revenue ?? 0, locale)} />
+          <KpiCard label="Despesa Total" value={formatCurrency(summary?.total_expenses ?? 0, locale)} />
+          <KpiCard
+            label="Lucro Líquido Total"
+            value={formatCurrency(summary?.total_net_profit ?? 0, locale)}
+            tone={(summary?.total_net_profit ?? 0) >= 0 ? 'positive' : 'negative'}
+          />
+        </div>
+      </div>
+
       {/* CR-001 Change 2: reorganized summary cards — first row operational, second row financial */}
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">

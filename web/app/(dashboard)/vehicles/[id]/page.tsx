@@ -72,6 +72,11 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           value={formatCurrency(summary?.accumulated_depreciated_profit ?? 0, locale)}
         />
         <KpiCard
+          label="Depreciação"
+          value={formatCurrency(summary?.depreciation ?? 0, locale)}
+          tone={(summary?.depreciation ?? 0) >= 0 ? 'positive' : 'negative'}
+        />
+        <KpiCard
           label="ROI Depreciado"
           value={
             summary?.roi_depreciated_percentage != null
