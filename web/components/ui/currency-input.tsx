@@ -24,8 +24,16 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
   ({ name, value, onChange, onBlur, disabled, className, inputClassName }, ref) => {
     const [display, setDisplay] = useState('');
 
-    // Keep the displayed text in sync when the form resets/loads external values
-    // (e.g. opening an edit page), without fighting the user while they type.
+    // Keep the displayed text in sync whenever the external value changes —
+    // not just on first mount. CR-008 (v1.3) bug fix: forms that load an
+    // existing record asynchronously (waiting on a lookup fetch before
+    // calling reset()) were mounting this input with value=undefined first;
+    // with an empty dependency array, this effect ran once and never
+    // re-synced display once the real value arrived, leaving the field
+    // permanently blank. Re-running on every `value` change fixes this,
+    // while still not fighting the user's own typing (onChange already
+    // keeps `display` correct character-by-character; this effect only
+    // matters for externally-driven changes like reset()).
     useEffect(() => {
       if (value == null) {
         setDisplay('');
@@ -33,7 +41,7 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
         setDisplay(formatDigitsToDisplay(toDigits(String(value.toFixed(2)))));
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [value]);
 
     function toDigits(raw: string): string {
       // Keep only digits; everything else (letters, e, +, -, multiple commas) is dropped.

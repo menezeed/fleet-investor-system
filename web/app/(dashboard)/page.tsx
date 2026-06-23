@@ -71,20 +71,8 @@ export default function DashboardPage() {
         </FieldWrapper>
       </div>
 
-      {/* CR-006: lifetime financial totals, shown above the existing monthly indicators */}
-      <div className="flex flex-col gap-3">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <KpiCard label="Receita Total" value={formatCurrency(summary?.total_revenue ?? 0, locale)} />
-          <KpiCard label="Despesa Total" value={formatCurrency(summary?.total_expenses ?? 0, locale)} />
-          <KpiCard
-            label="Lucro Líquido Total"
-            value={formatCurrency(summary?.total_net_profit ?? 0, locale)}
-            tone={(summary?.total_net_profit ?? 0) >= 0 ? 'positive' : 'negative'}
-          />
-        </div>
-      </div>
-
-      {/* CR-001 Change 2: reorganized summary cards — first row operational, second row financial */}
+      {/* CR-001 (v1.3): totals moved from the first row to sit directly
+          above their corresponding monthly indicators, in the second row. */}
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           <KpiCard label={t('totalVehicles')} value={String(summary?.total_vehicles ?? 0)} />
@@ -96,6 +84,15 @@ export default function DashboardPage() {
           />
           <KpiCard label={t('eventsThisMonth')} value={String(summary?.events_this_month ?? 0)} />
           <KpiCard label={t('eventsNextMonth')} value={String(summary?.events_next_month_forecast ?? 0)} />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <KpiCard label="Receita Total" value={formatCurrency(summary?.total_revenue ?? 0, locale)} />
+          <KpiCard label="Despesa Total" value={formatCurrency(summary?.total_expenses ?? 0, locale)} />
+          <KpiCard
+            label="Lucro Líquido Total"
+            value={formatCurrency(summary?.total_net_profit ?? 0, locale)}
+            tone={(summary?.total_net_profit ?? 0) >= 0 ? 'positive' : 'negative'}
+          />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <KpiCard label={t('monthlyRevenue')} value={formatCurrency(summary?.monthly_revenue ?? 0, locale)} />

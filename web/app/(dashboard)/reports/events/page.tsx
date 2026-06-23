@@ -7,6 +7,7 @@ import { ExportButtons } from '@/components/reports/export-buttons';
 import { FieldWrapper, Select } from '@/components/ui/form-fields';
 import { DatePickerBr } from '@/components/ui/date-picker-br';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
+import { useSortableState, useSortedRows } from '@/lib/utils/use-sortable';
 import type { Vehicle, Investor } from '@/types/database';
 
 interface EventReportRow {
@@ -33,6 +34,7 @@ export default function EventsReportPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [rows, setRows] = useState<EventReportRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const { sort, toggleSort } = useSortableState({ column: 'date', direction: 'asc' });
 
   useEffect(() => {
     supabase.from('investors').select('*').eq('is_active', true).order('full_name').returns<Investor[]>().then(({ data }) => setInvestors(data ?? []));
@@ -84,12 +86,28 @@ export default function EventsReportPage() {
     load();
   }, [startDate, endDate, investorFilter, vehicleFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const getValue = (row: EventReportRow, column: string) => {
+    switch (column) {
+      case 'date':
+        return row.planned_date;
+      case 'vehicle':
+        return row.vehicle_name;
+      case 'description':
+        return row.description;
+      case 'value':
+        return row.value;
+      default:
+        return null;
+    }
+  };
+  const sortedRows = useSortedRows(rows, sort, getValue);
+
   // CR-014: column order = Date, Vehicle Name / License Plate, Event Description, Amount
   const columns: Column<EventReportRow>[] = [
-    { header: 'Data', accessor: (e) => (e.planned_date ? formatDate(e.planned_date, locale) : '—') },
-    { header: 'Veículo / Placa', accessor: (e) => `${e.vehicle_name} — ${e.plate_number}` },
-    { header: 'Descrição do Evento', accessor: (e) => e.description ?? '—' },
-    { header: 'Valor', align: 'right', accessor: (e) => (e.value ? formatCurrency(e.value, locale) : '—') },
+    { header: 'Data', sortKey: 'date', accessor: (e) => (e.planned_date ? formatDate(e.planned_date, locale) : '—') },
+    { header: 'Veículo / Placa', sortKey: 'vehicle', accessor: (e) => `${e.vehicle_name} — ${e.plate_number}` },
+    { header: 'Descrição do Evento', sortKey: 'description', accessor: (e) => e.description ?? '—' },
+    { header: 'Valor', align: 'right', sortKey: 'value', accessor: (e) => (e.value ? formatCurrency(e.value, locale) : '—') },
   ];
 
   const exportRows = rows.map((e) => ({
@@ -149,7 +167,14 @@ export default function EventsReportPage() {
       {loading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
       ) : (
-        <DataTable columns={columns} rows={rows} keyExtractor={(e) => e.id} emptyMessage="Nenhum evento encontrado" />
+        <DataTable
+          columns={columns}
+          rows={sortedRows}
+          keyExtractor={(e) => e.id}
+          emptyMessage="Nenhum evento encontrado"
+          sort={sort}
+          onSortChange={toggleSort}
+        />
       )}
     </div>
   );

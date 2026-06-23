@@ -31,6 +31,7 @@ export function CashFlowForm({ vehicles, entry }: CashFlowFormProps) {
   const supabase = createClient();
   const tCommon = useTranslations('common');
   const [serverError, setServerError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const {
@@ -105,20 +106,40 @@ export function CashFlowForm({ vehicles, entry }: CashFlowFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactionType]);
 
-  // CR-007: pre-fill Amount with the vehicle's default Rental Value when
-  // creating a new revenue entry for that vehicle.
+  // CR-009 (v1.3): when Transaction Category = "Receita de Locação" (rental
+  // revenue), pre-fill Amount from the vehicle's active assignment's Weekly
+  // Rental Value (Alocações screen) — not the vehicle's own rental_value
+  // field. The user can still edit the value manually afterwards.
+  const categoryId = useWatch({ control, name: 'category_id' });
+  const selectedCategoryLabel = categoryOptions.find((c) => c.id === categoryId)?.label;
+
   useEffect(() => {
     if (entry) return;
     if (transactionType !== 'revenue') return;
-    const vehicle = vehicles.find((v) => v.id === selectedVehicleId);
-    if (vehicle?.rental_value != null) {
-      setValue('amount', vehicle.rental_value);
-    }
+    if (!selectedVehicleId) return;
+    if (selectedCategoryLabel !== 'Receita de Locação') return;
+
+    let active = true;
+    supabase
+      .from('vehicle_assignments')
+      .select('weekly_rental_value')
+      .eq('vehicle_id', selectedVehicleId)
+      .is('end_date', null)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (active && data?.weekly_rental_value != null) {
+          setValue('amount', data.weekly_rental_value);
+        }
+      });
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVehicleId, transactionType]);
+  }, [selectedVehicleId, transactionType, selectedCategoryLabel]);
 
   async function onSubmit(values: CashFlowFormValues) {
     setServerError(null);
+    setSuccessMessage(null);
 
     const payload = {
       ...values,
@@ -135,8 +156,22 @@ export function CashFlowForm({ vehicles, entry }: CashFlowFormProps) {
       return;
     }
 
-    router.push('/cash-flow');
-    router.refresh();
+    // CR-007 (v1.3): stay on this screen after saving instead of returning
+    // to the list, so the user can immediately register another entry. The
+    // edit screen still redirects back, since there's nothing further to do
+    // after updating a specific record.
+    if (entry) {
+      router.push('/cash-flow');
+      router.refresh();
+    } else {
+      reset({
+        vehicle_id: values.vehicle_id, // keep the vehicle selected for fast repeat entries
+        transaction_type: 'revenue',
+        transaction_date: values.transaction_date, // keep the date too — common case is several entries on the same day
+        category_id: categoryOptions[0]?.id,
+      });
+      setSuccessMessage('Lançamento salvo com sucesso. Você pode cadastrar outro.');
+    }
   }
 
   async function handleDelete() {
@@ -233,6 +268,7 @@ export function CashFlowForm({ vehicles, entry }: CashFlowFormProps) {
           </FieldWrapper>
 
           {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+          {successMessage && <p className="text-sm text-success">{successMessage}</p>}
 
           <div className="flex justify-between gap-2">
             {entry ? (
@@ -244,8 +280,8 @@ export function CashFlowForm({ vehicles, entry }: CashFlowFormProps) {
               <span />
             )}
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => router.back()}>
-                {tCommon('cancel')}
+              <Button type="button" variant="outline" onClick={() => router.push('/cash-flow')}>
+                Voltar
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {tCommon('save')}

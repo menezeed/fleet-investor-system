@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { DataTable, type Column } from '@/components/ui/data-table';
 import { formatCurrency, formatDate } from '@/lib/utils/format';
+import type { SortState } from '@/lib/utils/use-sortable';
 
 export interface CashFlowRow {
   id: string;
@@ -15,13 +16,24 @@ export interface CashFlowRow {
 }
 
 // CR-011: Grid columns = Date, Vehicle Name, License Plate, Transaction
-// Type, Amount. Expenses displayed in red.
-export function CashFlowTable({ rows, emptyMessage }: { rows: CashFlowRow[]; emptyMessage: string }) {
+// Type, Amount. Expenses displayed in red. CR-006/010 (v1.3): sortable,
+// default Date ascending then Transaction Type.
+export function CashFlowTable({
+  rows,
+  emptyMessage,
+  sort,
+  onSortChange,
+}: {
+  rows: CashFlowRow[];
+  emptyMessage: string;
+  sort: SortState;
+  onSortChange: (column: string) => void;
+}) {
   const router = useRouter();
   const locale = useLocale() as 'pt' | 'en';
 
   const columns: Column<CashFlowRow>[] = [
-    { header: 'Data', accessor: (r) => formatDate(r.transaction_date, locale) },
+    { header: 'Data', sortKey: 'transaction_date', accessor: (r) => formatDate(r.transaction_date, locale) },
     {
       header: 'Veículo',
       accessor: (r) => (r.vehicles ? `${r.vehicles.brand} ${r.vehicles.model}` : '—'),
@@ -31,11 +43,13 @@ export function CashFlowTable({ rows, emptyMessage }: { rows: CashFlowRow[]; emp
     {
       header: 'Tipo',
       align: 'center',
+      sortKey: 'transaction_type',
       accessor: (r) => (r.transaction_type === 'revenue' ? 'Receita' : 'Despesa'),
     },
     {
       header: 'Valor',
       align: 'right',
+      sortKey: 'amount',
       accessor: (r) => (
         <span className={r.transaction_type === 'expense' ? 'text-destructive font-medium' : 'text-success font-medium'}>
           {r.transaction_type === 'expense' ? '-' : ''}
@@ -52,6 +66,8 @@ export function CashFlowTable({ rows, emptyMessage }: { rows: CashFlowRow[]; emp
       keyExtractor={(r) => r.id}
       emptyMessage={emptyMessage}
       onRowClick={(r) => router.push(`/cash-flow/${r.id}/edit`)}
+      sort={sort}
+      onSortChange={onSortChange}
     />
   );
 }

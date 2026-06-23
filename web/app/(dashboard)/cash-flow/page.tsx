@@ -8,6 +8,7 @@ import { CashFlowTable, type CashFlowRow } from '@/components/tables/cash-flow-t
 import { Button } from '@/components/ui/button';
 import { FieldWrapper, Select } from '@/components/ui/form-fields';
 import { DatePickerBr } from '@/components/ui/date-picker-br';
+import { useSortableState } from '@/lib/utils/use-sortable';
 import type { Vehicle } from '@/types/database';
 
 // CR-011: Cash Flow List. Filters: Date Range (default: first day of
@@ -15,6 +16,8 @@ import type { Vehicle } from '@/types/database';
 // (Revenue/Expense/All). Grid shows Date, Vehicle Name, License Plate,
 // Transaction Type, Amount (expenses in red). Create button opens the
 // creation screen; clicking a row opens its edit screen.
+// CR-006 (v1.3): default sort is Date ascending, then Transaction Type.
+// CR-010 (v1.3): the user can still click a column header to re-sort.
 export default function CashFlowPage() {
   const supabase = createClient();
 
@@ -28,6 +31,7 @@ export default function CashFlowPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [rows, setRows] = useState<CashFlowRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const { sort, toggleSort } = useSortableState({ column: 'transaction_date', direction: 'asc' });
 
   useEffect(() => {
     supabase
@@ -46,7 +50,11 @@ export default function CashFlowPage() {
       let query = supabase
         .from('vehicle_cash_flow_detail')
         .select('id, transaction_date, transaction_type, amount, category_label, vehicle_id')
-        .order('transaction_date', { ascending: false });
+        // CR-006: secondary sort by transaction_type always applied, so the
+        // user's chosen column (CR-010) is the primary key and ties break
+        // the same way the CR specifies.
+        .order(sort.column ?? 'transaction_date', { ascending: sort.direction === 'asc' })
+        .order('transaction_type', { ascending: true });
 
       if (startDate) query = query.gte('transaction_date', startDate);
       if (endDate) query = query.lte('transaction_date', endDate);
@@ -74,7 +82,7 @@ export default function CashFlowPage() {
 
     if (vehicles.length > 0 || vehicleFilter === '') load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, vehicleFilter, typeFilter, vehicles]);
+  }, [startDate, endDate, vehicleFilter, typeFilter, vehicles, sort]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -117,7 +125,12 @@ export default function CashFlowPage() {
       {loading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
       ) : (
-        <CashFlowTable rows={rows} emptyMessage="Nenhuma transação encontrada no período selecionado" />
+        <CashFlowTable
+          rows={rows}
+          emptyMessage="Nenhuma transação encontrada no período selecionado"
+          sort={sort}
+          onSortChange={toggleSort}
+        />
       )}
     </div>
   );

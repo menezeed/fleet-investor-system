@@ -8,6 +8,7 @@ import { EventsTable, type EventRow } from '@/components/tables/events-table';
 import { Button } from '@/components/ui/button';
 import { FieldWrapper, Select } from '@/components/ui/form-fields';
 import { DatePickerBr } from '@/components/ui/date-picker-br';
+import { useSortableState } from '@/lib/utils/use-sortable';
 import type { Vehicle } from '@/types/database';
 
 // CR-004/CR-010: a date-range-filterable list of events (completed and
@@ -27,6 +28,7 @@ export default function EventsPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const { sort, toggleSort } = useSortableState({ column: 'planned_date', direction: 'asc' });
 
   useEffect(() => {
     supabase
@@ -47,8 +49,8 @@ export default function EventsPage() {
         .select(
           'id, planned_date, value, mileage, is_completed, vehicles(plate_number), lookup_expense_types(label)'
         )
-        // UAT fix: events list sorted by date.
-        .order('planned_date', { ascending: true, nullsFirst: false });
+        // CR-010: clicking a column header re-sorts; default is date ascending.
+        .order(sort.column ?? 'planned_date', { ascending: sort.direction === 'asc', nullsFirst: false });
 
       if (startDate) query = query.gte('planned_date', startDate);
       if (endDate) query = query.lte('planned_date', endDate);
@@ -62,7 +64,7 @@ export default function EventsPage() {
     }
 
     load();
-  }, [startDate, endDate, vehicleFilter, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [startDate, endDate, vehicleFilter, statusFilter, sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col gap-6">
@@ -108,7 +110,12 @@ export default function EventsPage() {
       {loading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
       ) : (
-        <EventsTable events={events} emptyMessage="Nenhum evento encontrado no período selecionado" />
+        <EventsTable
+          events={events}
+          emptyMessage="Nenhum evento encontrado no período selecionado"
+          sort={sort}
+          onSortChange={toggleSort}
+        />
       )}
     </div>
   );

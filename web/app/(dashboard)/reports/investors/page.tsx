@@ -9,6 +9,7 @@ import { ExportButtons } from '@/components/reports/export-buttons';
 import { FieldWrapper } from '@/components/ui/form-fields';
 import { DatePickerBr } from '@/components/ui/date-picker-br';
 import { formatCurrency } from '@/lib/utils/format';
+import { useSortableState, useSortedRows } from '@/lib/utils/use-sortable';
 import type { InvestorReportSummary } from '@/types/database';
 
 // CR-014: Investor Report — consolidated list, one row per investor, with a
@@ -28,6 +29,7 @@ export default function InvestorReportPage() {
   const [endDate, setEndDate] = useState(today);
   const [rows, setRows] = useState<InvestorReportSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const { sort, toggleSort } = useSortableState({ column: 'net_profit', direction: 'desc' });
 
   useEffect(() => {
     async function load() {
@@ -51,13 +53,32 @@ export default function InvestorReportPage() {
     load();
   }, [startDate, endDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const getValue = (row: InvestorReportSummary, column: string) => {
+    switch (column) {
+      case 'investor':
+        return row.investor_name;
+      case 'revenue':
+        return row.total_revenue;
+      case 'expenses':
+        return row.total_expenses;
+      case 'net_profit':
+        return row.net_profit;
+      case 'portfolio':
+        return row.portfolio_market_value;
+      default:
+        return null;
+    }
+  };
+  const sortedRows = useSortedRows(rows, sort, getValue);
+
   const columns: Column<InvestorReportSummary>[] = [
-    { header: 'Investidor', accessor: (r) => <span className="font-medium">{r.investor_name}</span> },
-    { header: 'Receita Total', align: 'right', accessor: (r) => formatCurrency(r.total_revenue, locale) },
-    { header: 'Despesa Total', align: 'right', accessor: (r) => formatCurrency(r.total_expenses, locale) },
+    { header: 'Investidor', sortKey: 'investor', accessor: (r) => <span className="font-medium">{r.investor_name}</span> },
+    { header: 'Receita Total', align: 'right', sortKey: 'revenue', accessor: (r) => formatCurrency(r.total_revenue, locale) },
+    { header: 'Despesa Total', align: 'right', sortKey: 'expenses', accessor: (r) => formatCurrency(r.total_expenses, locale) },
     {
       header: 'Lucro Líquido',
       align: 'right',
+      sortKey: 'net_profit',
       accessor: (r) => (
         <span className={r.net_profit >= 0 ? 'text-success font-medium' : 'text-destructive font-medium'}>
           {formatCurrency(r.net_profit, locale)}
@@ -67,6 +88,7 @@ export default function InvestorReportPage() {
     {
       header: 'Valor de Mercado do Portfólio',
       align: 'right',
+      sortKey: 'portfolio',
       accessor: (r) => formatCurrency(r.portfolio_market_value, locale),
     },
   ];
@@ -110,10 +132,12 @@ export default function InvestorReportPage() {
       ) : (
         <DataTable
           columns={columns}
-          rows={rows}
+          rows={sortedRows}
           keyExtractor={(r) => r.investor_id}
           emptyMessage="Nenhum investidor encontrado"
           onRowClick={(r) => router.push(`/reports/investors/${r.investor_id}`)}
+          sort={sort}
+          onSortChange={toggleSort}
         />
       )}
     </div>

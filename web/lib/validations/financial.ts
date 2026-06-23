@@ -37,7 +37,7 @@ export const vehicleAssignmentSchema = z
     driver_id: z.string().uuid('Selecione um motorista'),
     start_date: z.string().min(1, 'Data de início é obrigatória'),
     end_date: z.string().optional().nullable(),
-    monthly_rental_value: z.coerce.number().min(0, 'Valor deve ser positivo'),
+    weekly_rental_value: z.coerce.number().min(0, 'Valor deve ser positivo'),
     notes: z.string().optional().nullable(),
   })
   .refine((data) => !data.end_date || data.end_date >= data.start_date, {

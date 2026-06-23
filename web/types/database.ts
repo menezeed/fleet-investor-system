@@ -94,7 +94,7 @@ export interface VehicleAssignment {
   driver_id: string;
   start_date: string;
   end_date: string | null;
-  monthly_rental_value: number;
+  weekly_rental_value: number;
   is_active: boolean;
   notes: string | null;
   created_at: string;
@@ -175,6 +175,8 @@ export interface FleetDashboardSummary {
 export interface FleetPerformanceRow {
   vehicle_id: string;
   plate_number: string;
+  brand: string;
+  model: string;
   status_code: VehicleStatusCode;
   status_label: string;
   current_driver_name: string | null;

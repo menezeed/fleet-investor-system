@@ -1,17 +1,34 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/client';
 import { AssignmentsTable, type AssignmentRow } from '@/components/tables/assignments-table';
 import { Button } from '@/components/ui/button';
+import { useSortableState } from '@/lib/utils/use-sortable';
 
-export default async function AssignmentsPage() {
+// CR-010 (v1.3): sortable grid — clicking a column header toggles
+// ascending/descending and re-queries the server in that order.
+export default function AssignmentsPage() {
   const supabase = createClient();
+  const { sort, toggleSort } = useSortableState({ column: 'start_date', direction: 'desc' });
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { data: assignments } = await supabase
-    .from('vehicle_assignments')
-    .select('id, start_date, end_date, monthly_rental_value, vehicles(plate_number), drivers(full_name)')
-    .order('start_date', { ascending: false })
-    .returns<AssignmentRow[]>();
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const { data } = await supabase
+        .from('vehicle_assignments_list')
+        .select('*')
+        .order(sort.column ?? 'start_date', { ascending: sort.direction === 'asc' })
+        .returns<AssignmentRow[]>();
+      setAssignments(data ?? []);
+      setLoading(false);
+    }
+    load();
+  }, [sort]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col gap-6">
@@ -25,7 +42,16 @@ export default async function AssignmentsPage() {
         </Link>
       </div>
 
-      <AssignmentsTable assignments={assignments ?? []} emptyMessage="Nenhuma alocação encontrada" />
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Carregando...</p>
+      ) : (
+        <AssignmentsTable
+          assignments={assignments}
+          emptyMessage="Nenhuma alocação encontrada"
+          sort={sort}
+          onSortChange={toggleSort}
+        />
+      )}
     </div>
   );
 }
